@@ -1,9 +1,11 @@
 package com.example.foodDelivery.consumer;
 
+import com.example.foodDelivery.event.OrderEvent;
 import com.example.foodDelivery.model.Order;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.kafka.annotation.KafkaListener;
+//import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -28,8 +30,8 @@ public class RestaurantConsumer {
     /**
      * Listener untuk inventory queue
      */
-    @RabbitListener(queues = "${rabbitmq.queue.inventory}")
-    public void receiveOrder(Order order) {
+    @KafkaListener(topics = "order-topic", groupId = "restaurant-group")
+    public void receiveOrder(OrderEvent order) {
         log.info("===========================================");
         log.info("Order ID: {}", order.getOrderId());
         log.info("Produk: {}", order.getProductName());
@@ -60,7 +62,7 @@ public class RestaurantConsumer {
     /**
      * Cek ketersediaan stok
      */
-    private void checkStock(Order order) {
+    private void checkStock(OrderEvent order) {
         String productName = order.getProductName();
         int requestedQty = order.getQuantity();
         Integer currentStock = menuStock.get(productName);
@@ -90,7 +92,7 @@ public class RestaurantConsumer {
     /**
      * Update stok setelah order
      */
-    private void updateStock(Order order) {
+    private void updateStock(OrderEvent order) {
         String productName = order.getProductName();
         int quantity = order.getQuantity();
         Integer currentStock = menuStock.getOrDefault(productName, 0);
@@ -114,7 +116,7 @@ public class RestaurantConsumer {
     /**
      * Handler jika stok tidak cukup
      */
-    private void handleInsufficientStock(Order order) {
+    private void handleInsufficientStock(OrderEvent order) {
         log.warn("⚠ Menangani stok tidak cukup untuk order: {}",
                 order.getOrderId());
 

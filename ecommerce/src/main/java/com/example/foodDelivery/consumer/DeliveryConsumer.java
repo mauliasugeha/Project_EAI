@@ -1,19 +1,18 @@
 package com.example.foodDelivery.consumer;
 
+import com.example.foodDelivery.event.OrderEvent;
 import com.example.foodDelivery.model.Order;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
-
 @Service
 public class DeliveryConsumer {
 
-    private static final Logger log = LoggerFactory.getLogger(DeliveryConsumer.class);
+    @KafkaListener(topics = "order-topic", groupId = "delivery-group")
+    public void receiveOrder(OrderEvent order) {
 
-    @RabbitListener(queues = "${rabbitmq.queue.delivery}")
-    public void receiveOrder(Order order) {
-        log.info("🚚 Delivery menerima order: {}", order.getOrderId());
+        System.out.println("🚚 DELIVERY menerima order: " + order.getOrderId());
 
         try {
             Thread.sleep(2000);
@@ -21,6 +20,6 @@ public class DeliveryConsumer {
             Thread.currentThread().interrupt();
         }
 
-        log.info("✅ Order sedang dikirim ke customer");
+        System.out.println("✅ Order sedang dikirim ke customer");
     }
 }

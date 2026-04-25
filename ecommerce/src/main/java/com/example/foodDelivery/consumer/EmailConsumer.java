@@ -1,16 +1,18 @@
 package com.example.foodDelivery.consumer;
 
+import com.example.foodDelivery.event.OrderEvent;
 import com.example.foodDelivery.model.Order;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
+//import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 @Service
 public class EmailConsumer {
     private static final Logger log = LoggerFactory.getLogger(EmailConsumer.class);
 
-    @RabbitListener(queues = "${rabbitmq.queue.email}")
-    public void receiveOrder(Order order) {
+    @KafkaListener(topics = "order-topic", groupId = "email-group")
+    public void receiveOrder(OrderEvent order) {
         log.info("📧 EMAIL SERVICE - Menerima Order: {}", order.getOrderId());
 
         try {
@@ -23,7 +25,7 @@ public class EmailConsumer {
         }
     }
 
-    private void sendOrderConfirmationEmail(Order order) {
+    private void sendOrderConfirmationEmail(OrderEvent order) {
         log.info("Mengirim email ke customer...");
 
         // Simulasi delay kirim email
@@ -47,8 +49,8 @@ public class EmailConsumer {
         log.info(" Restaurant Name: {}", order.getRestaurantName());
         log.info(" Product: {}", order.getProductName());
         log.info(" Quantity: {}", order.getQuantity());
-        log.info(" Price: Rp {}", order.getPrice());
-        log.info(" Total: Rp {}", order.getPrice().multiply(new java.math.BigDecimal(order.getQuantity())));
+        log.info(" Price: Rp {}", order.getTotalPrice());
+        log.info(" Total: Rp {}", order.getTotalPrice().multiply(new java.math.BigDecimal(order.getQuantity())));
         log.info("");
         log.info("Your order is being processed.");
         log.info("===========================================");
