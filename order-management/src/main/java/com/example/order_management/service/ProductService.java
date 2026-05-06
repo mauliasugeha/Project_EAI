@@ -1,6 +1,7 @@
 package com.example.order_management.service;
 
 import com.example.order_management.entity.Product;
+// import com.example.order_management.kafka.ProductProducer;
 import com.example.order_management.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -11,6 +12,9 @@ import java.util.Optional;
 public class ProductService {
     @Autowired
     private ProductRepository productRepository;
+
+    // @Autowired
+    // private ProductProducer productProducer;
 
     public List<Product> getAllProducts() {
         return productRepository.findAll();
