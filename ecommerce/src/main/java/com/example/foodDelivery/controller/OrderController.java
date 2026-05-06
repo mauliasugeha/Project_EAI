@@ -1,7 +1,7 @@
 package com.example.foodDelivery.controller;
 
 import com.example.foodDelivery.event.OrderEvent;
-import com.example.foodDelivery.producer.OrderProducer;
+import com.example.foodDelivery.service.OrderService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,10 +13,10 @@ import java.util.UUID;
 @RequestMapping("/api")
 public class OrderController {
 
-    private final OrderProducer orderProducer;
+    private final OrderService orderService;
 
-    public OrderController(OrderProducer orderProducer) {
-        this.orderProducer = orderProducer;
+    public OrderController(OrderService orderService) {
+        this.orderService = orderService;
     }
 
     @PostMapping("/order")
@@ -40,12 +40,21 @@ public class OrderController {
                 LocalDateTime.now()
         );
 
-        orderProducer.sendOrder(event);
+        event.setStatus("CREATED");
+
+        orderService.createOrder(event);
+
+        // System.out.println("=================================");
+        // System.out.println("🧾 ORDER DIBUAT");
+        // System.out.println("ID: " + event.getOrderId());
+        // System.out.println("Customer: " + event.getCustomerName());
+        // System.out.println("Status: MENUNGGU PEMBAYARAN");
+        // System.out.println("=================================");
 
         return ResponseEntity.ok("Order berhasil dibuat dengan ID: " + event.getOrderId());
     }
 
-    // DTO request tetap sama
+    // DTO tetap sama
     public static class OrderRequest {
         private String customerName;
         private String restaurantName;

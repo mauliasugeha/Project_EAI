@@ -5,15 +5,15 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
-public class OrderProducer {
+public class PaymentProducer {
 
     private final KafkaTemplate<String, OrderEvent> kafkaTemplate;
 
-    public OrderProducer(KafkaTemplate<String, OrderEvent> kafkaTemplate) {
+    public PaymentProducer(KafkaTemplate<String, OrderEvent> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
     }
 
-    public void sendOrder(OrderEvent order) {
-        kafkaTemplate.send("order-topic", order);
+    public void sendPaymentSuccess(OrderEvent order) {
+        kafkaTemplate.send("payment-success-topic", order);
     }
 }
