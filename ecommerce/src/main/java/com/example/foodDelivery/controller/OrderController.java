@@ -2,11 +2,17 @@ package com.example.foodDelivery.controller;
 
 import com.example.foodDelivery.event.OrderEvent;
 import com.example.foodDelivery.producer.OrderProducer;
+import com.example.foodDelivery.model.Order;
+import com.example.foodDelivery.repository.OrderRepository;
+import com.example.foodDelivery.service.OrderService;
+
+import com.example.foodDelivery.service.OrderService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -14,12 +20,17 @@ import java.util.UUID;
 public class OrderController {
 
     private final OrderProducer orderProducer;
+    private final OrderRepository orderRepository;
 
-    public OrderController(OrderProducer orderProducer) {
+    private final OrderService orderService;
+
+    public OrderController(OrderProducer orderProducer, OrderRepository orderRepository, OrderService orderService) {
         this.orderProducer = orderProducer;
+        this.orderRepository = orderRepository;
+        this.orderService = orderService;
     }
 
-    @PostMapping("/order")
+    @PostMapping("/orders")
     public ResponseEntity<String> createOrder(@RequestBody OrderRequest request) {
 
         if (request.getQuantity() <= 0) {
@@ -30,22 +41,43 @@ public class OrderController {
             return ResponseEntity.badRequest().body("Price harus > 0");
         }
 
-        OrderEvent event = new OrderEvent(
+        // 1. simpan ke DB
+        Order order = new Order(
                 UUID.randomUUID().toString(),
                 request.getCustomerName(),
                 request.getRestaurantName(),
                 request.getProductName(),
                 request.getQuantity(),
-                request.getTotalPrice(),
-                LocalDateTime.now()
+                request.getTotalPrice()
         );
 
-        orderProducer.sendOrder(event);
+        orderRepository.save(order);
 
-        return ResponseEntity.ok("Order berhasil dibuat dengan ID: " + event.getOrderId());
+        // 2. kirim ke Kafka (INI YANG KAMU HAPUS TADI)
+        OrderEvent event = new OrderEvent(
+                order.getOrderId(),
+                order.getCustomerName(),
+                order.getRestaurantName(),
+                order.getProductName(),
+                order.getQuantity(),
+                order.getPrice(),
+                LocalDateTime.now()
+        );
+        event.setStatus("CREATED");
+
+        orderService.createOrder(event);
+
+//        orderProducer.sendOrder(event);
+
+        return ResponseEntity.ok("Order disimpan & event dikirim ke Kafka");
     }
 
-    // DTO request tetap sama
+    @GetMapping("/orders")
+    public ResponseEntity<List<Order>> getAllOrders() {
+        return ResponseEntity.ok(orderRepository.findAll());
+    }
+
+    // DTO request
     public static class OrderRequest {
         private String customerName;
         private String restaurantName;

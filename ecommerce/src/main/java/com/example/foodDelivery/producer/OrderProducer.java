@@ -17,11 +17,11 @@ public class OrderProducer {
         this.kafkaTemplate = kafkaTemplate;
     }
 
-    public void sendOrder(OrderEvent event) {
-        log.info("📤 Sending order to Kafka: {}", event.getOrderId());
+    public void sendOrder(OrderEvent order) {
+//        log.info("📤 Sending order to Kafka: {}", event.getOrderId());
 
-        kafkaTemplate.send("order-topic", event);
+        kafkaTemplate.send("order-topic", order);
 
-        log.info("✅ Order sent to Kafka topic");
+//        log.info("✅ Order sent to Kafka topic");
     }
 }
