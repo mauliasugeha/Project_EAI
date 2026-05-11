@@ -9,21 +9,59 @@ import org.springframework.stereotype.Service;
 public class PaymentConsumer {
 
     private final PaymentProducer paymentProducer;
+
     private static String lastPaymentStatus = "BELUM ADA";
 
     public PaymentConsumer(PaymentProducer paymentProducer) {
         this.paymentProducer = paymentProducer;
     }
 
-    @KafkaListener(topics = "order-topic", groupId = "payment-group")
+    @KafkaListener(
+            topics = "order-topic",
+            groupId = "payment-group"
+    )
     public void processPayment(OrderEvent order) {
 
         System.out.println("💳 PAYMENT SERVICE PROCESSING...");
 
+        // ================= PAYMENT FAILED =================
+
+        if (order.getCustomerName()
+                .equalsIgnoreCase("FAILED")) {
+
+            order.setStatus("CANCELLED");
+
+            paymentProducer.sendPaymentFailed(order);
+
+            lastPaymentStatus =
+                    "FAILED - Order "
+                            + order.getOrderId()
+                            + " dibatalkan karena pembayaran gagal";
+
+            System.out.println("=================================");
+            System.out.println("❌ PAYMENT FAILED");
+            System.out.println("Order ID: " + order.getOrderId());
+            System.out.println("Reason: Payment gateway rejected transaction");
+            System.out.println("=================================");
+
+            return;
+        }
+
+        // ================= PAYMENT SUCCESS =================
+
         order.setStatus("PAID");
-        
+
         paymentProducer.sendPaymentSuccess(order);
-        lastPaymentStatus = "PAID - Order " + order.getOrderId();
+
+        lastPaymentStatus =
+                "PAID - Order "
+                        + order.getOrderId()
+                        + " berhasil dibayar";
+
+        System.out.println("=================================");
+        System.out.println("💳 PEMBAYARAN BERHASIL");
+        System.out.println("Order ID: " + order.getOrderId());
+        System.out.println("=================================");
     }
 
     public static String getLastPaymentStatus() {

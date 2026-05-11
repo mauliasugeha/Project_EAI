@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 @Service
 public class OrderService {
@@ -14,15 +13,13 @@ public class OrderService {
 
     public OrderEvent createOrder(OrderEvent order) {
 
-        String id = UUID.randomUUID().toString();
-        order.setOrderId(id);
         order.setStatus("CREATED");
 
-        orderStore.put(id, order);
+        orderStore.put(order.getOrderId(), order);
 
         System.out.println("=================================");
         System.out.println("🧾 ORDER DIBUAT");
-        System.out.println("ID: " + id);
+        System.out.println("ID: " + order.getOrderId());
         System.out.println("Customer: " + order.getCustomerName());
         System.out.println("Status: MENUNGGU PEMBAYARAN");
         System.out.println("=================================");

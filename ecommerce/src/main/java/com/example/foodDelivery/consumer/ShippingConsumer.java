@@ -4,26 +4,51 @@ import com.example.foodDelivery.event.OrderEvent;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
+
 @Service
 public class ShippingConsumer {
-    private static String lastShippingStatus = "BELUM ADA";
+
+    private static final Map<String, String> shippingStatus =
+            new HashMap<>();
 
     @KafkaListener(
-        topics = "payment-success-topic",
-        groupId = "shipping-group"
+            topics = "payment-success-topic",
+            groupId = "shipping-group"
     )
     public void processShipping(OrderEvent order) {
 
+        if ("CANCELLED".equals(order.getStatus())) {
+
+            shippingStatus.put(
+                    order.getOrderId(),
+                    "SHIPPING DIBATALKAN"
+            );
+
+            System.out.println("===================================");
+            System.out.println("🚫 SHIPPING DIBATALKAN");
+            System.out.println("Order ID: " + order.getOrderId());
+            System.out.println("===================================");
+
+            return;
+        }
+
         order.setStatus("SHIPPED");
-        lastShippingStatus = "SHIPPED - Order " + order.getOrderId();
+
+        shippingStatus.put(
+                order.getOrderId(),
+                "SHIPPED"
+        );
 
         System.out.println("===================================");
         System.out.println("🚚 SHIPPING SERVICE");
         System.out.println("Order dikirim: " + order.getOrderId());
         System.out.println("===================================");
 
-        java.math.BigDecimal total = order.getTotalPrice()
-        .multiply(new java.math.BigDecimal(order.getQuantity()));
+        BigDecimal total = order.getTotalPrice()
+                .multiply(new BigDecimal(order.getQuantity()));
 
         System.out.println("=========== NOTA DIGITAL ==========");
         System.out.println("Customer : " + order.getCustomerName());
@@ -34,7 +59,10 @@ public class ShippingConsumer {
         System.out.println("===================================");
     }
 
-    public static String getLastShippingStatus() {
-        return lastShippingStatus;
+    public static String getShippingStatus(String orderId) {
+        return shippingStatus.getOrDefault(
+                orderId,
+                "ORDER FAILED / SHIPPING DIBATALKAN"
+        );
     }
 }

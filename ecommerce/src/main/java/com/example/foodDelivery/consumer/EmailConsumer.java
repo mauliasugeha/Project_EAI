@@ -1,58 +1,87 @@
 package com.example.foodDelivery.consumer;
 
 import com.example.foodDelivery.event.OrderEvent;
-import com.example.foodDelivery.model.Order;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-//import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
+
 @Service
 public class EmailConsumer {
-    private static final Logger log = LoggerFactory.getLogger(EmailConsumer.class);
 
-    @KafkaListener(topics = "order-topic", groupId = "email-group")
-    public void receiveOrder(OrderEvent order) {
-        log.info("📧 EMAIL SERVICE - Menerima Order: {}", order.getOrderId());
+    private static final Logger log =
+            LoggerFactory.getLogger(EmailConsumer.class);
+
+    // ================= SUCCESS EMAIL =================
+
+    @KafkaListener(
+            topics = "payment-success-topic",
+            groupId = "email-success-group"
+    )
+    public void receiveSuccessEmail(OrderEvent order) {
+
+        log.info("📧 EMAIL SERVICE - PAYMENT SUCCESS");
 
         try {
-            sendOrderConfirmationEmail(order);
-            log.info("✅ Email konfirmasi terkirim ke {}", order.getCustomerName());
+
+            Thread.sleep(1000);
+
+            log.info("===========================================");
+            log.info("📧 EMAIL PEMBAYARAN BERHASIL");
+            log.info("===========================================");
+            log.info("To: customer@example.com");
+            log.info("Subject: Payment Success - {}", order.getOrderId());
+            log.info("");
+            log.info("Dear {},", order.getCustomerName());
+            log.info("");
+            log.info("Pembayaran berhasil diterima.");
+            log.info("Order sedang diproses pengiriman.");
+            log.info("");
+            log.info("Order ID: {}", order.getOrderId());
+            log.info("Produk: {}", order.getProductName());
+            log.info("===========================================");
 
         } catch (Exception e) {
-            log.error("❌ Gagal kirim email: {}", e.getMessage());
-            // Email failure tidak critical, log saja
+
+            log.error("❌ Gagal kirim email sukses: {}",
+                    e.getMessage());
         }
     }
 
-    private void sendOrderConfirmationEmail(OrderEvent order) {
-        log.info("Mengirim email ke customer...");
+    // ================= FAILED EMAIL =================
 
-        // Simulasi delay kirim email
+    @KafkaListener(
+            topics = "payment-failed-topic",
+            groupId = "email-failed-group"
+    )
+    public void receiveFailedEmail(OrderEvent order) {
+
+        log.info("📧 EMAIL SERVICE - PAYMENT FAILED");
+
         try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
 
-        log.info("===========================================");
-        log.info("📧 EMAIL CONTENT");
-        log.info("===========================================");
-        log.info("To: customer@example.com");
-        log.info("Subject: Order Confirmation - {}", order.getOrderId());
-        log.info("");
-        log.info("Dear {},", order.getCustomerName());
-        log.info("");
-        log.info("Thank you for your order!");
-        log.info("");
-        log.info("Order Details:");
-        log.info(" Restaurant Name: {}", order.getRestaurantName());
-        log.info(" Product: {}", order.getProductName());
-        log.info(" Quantity: {}", order.getQuantity());
-        log.info(" Price: Rp {}", order.getTotalPrice());
-        log.info(" Total: Rp {}", order.getTotalPrice().multiply(new java.math.BigDecimal(order.getQuantity())));
-        log.info("");
-        log.info("Your order is being processed.");
-        log.info("===========================================");
+            Thread.sleep(1000);
+
+            log.info("===========================================");
+            log.info("❌ EMAIL PEMBATALAN ORDER");
+            log.info("===========================================");
+            log.info("To: customer@example.com");
+            log.info("Subject: Payment Failed - {}", order.getOrderId());
+            log.info("");
+            log.info("Dear {},", order.getCustomerName());
+            log.info("");
+            log.info("Maaf, pembayaran order gagal.");
+            log.info("Order dibatalkan otomatis.");
+            log.info("");
+            log.info("Order ID: {}", order.getOrderId());
+            log.info("Produk: {}", order.getProductName());
+            log.info("Status: CANCELLED");
+            log.info("===========================================");
+
+        } catch (Exception e) {
+
+            log.error("❌ Gagal kirim email gagal: {}",
+                    e.getMessage());
+        }
     }
 }

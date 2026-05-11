@@ -30,16 +30,14 @@ public class PaymentController {
             return "Order sudah dibayar";
         }
 
-        order.setStatus("PAID");
+        if ("CANCELLED".equals(order.getStatus())) {
+            return "Order sudah dibatalkan";
+        }
 
-        System.out.println("=================================");
-        System.out.println("💳 PEMBAYARAN BERHASIL");
-        System.out.println("Order ID: " + orderId);
-        System.out.println("=================================");
-
+        // trigger payment process via kafka
         orderProducer.sendOrder(order);
 
-        return "Pembayaran berhasil untuk order: " + orderId;
+        return "Request pembayaran sedang diproses untuk order: " + orderId;
     }
 
     @GetMapping("/status")

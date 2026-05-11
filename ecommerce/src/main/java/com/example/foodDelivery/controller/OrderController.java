@@ -1,42 +1,71 @@
 package com.example.foodDelivery.controller;
 
 import com.example.foodDelivery.event.OrderEvent;
+import com.example.foodDelivery.model.Order;
+import com.example.foodDelivery.repository.OrderRepository;
 import com.example.foodDelivery.service.OrderService;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api")
 public class OrderController {
 
+    private final OrderRepository orderRepository;
     private final OrderService orderService;
 
-    public OrderController(OrderService orderService) {
+    public OrderController(
+            OrderRepository orderRepository,
+            OrderService orderService
+    ) {
+        this.orderRepository = orderRepository;
         this.orderService = orderService;
     }
+    
+    @PostMapping("/orders")
+    public ResponseEntity<String> createOrder(
+            @RequestBody OrderRequest request
+    ) {
 
-    @PostMapping("/order")
-    public ResponseEntity<String> createOrder(@RequestBody OrderRequest request) {
-
+        // VALIDASI
         if (request.getQuantity() <= 0) {
-            return ResponseEntity.badRequest().body("Quantity harus > 0");
+            return ResponseEntity.badRequest()
+                    .body("Quantity harus > 0");
         }
 
-        if (request.getTotalPrice().compareTo(BigDecimal.ZERO) <= 0) {
-            return ResponseEntity.badRequest().body("Price harus > 0");
+        if (request.getTotalPrice()
+                .compareTo(BigDecimal.ZERO) <= 0) {
+
+            return ResponseEntity.badRequest()
+                    .body("Price harus > 0");
         }
 
-        OrderEvent event = new OrderEvent(
-                UUID.randomUUID().toString(),
+        String orderId = UUID.randomUUID().toString();
+
+        Order order = new Order(
+                orderId,
                 request.getCustomerName(),
                 request.getRestaurantName(),
                 request.getProductName(),
                 request.getQuantity(),
-                request.getTotalPrice(),
+                request.getTotalPrice()
+        );
+
+        orderRepository.save(order);
+
+        OrderEvent event = new OrderEvent(
+                orderId,
+                order.getCustomerName(),
+                order.getRestaurantName(),
+                order.getProductName(),
+                order.getQuantity(),
+                order.getPrice(),
                 LocalDateTime.now()
         );
 
@@ -44,37 +73,69 @@ public class OrderController {
 
         orderService.createOrder(event);
 
-        // System.out.println("=================================");
-        // System.out.println("🧾 ORDER DIBUAT");
-        // System.out.println("ID: " + event.getOrderId());
-        // System.out.println("Customer: " + event.getCustomerName());
-        // System.out.println("Status: MENUNGGU PEMBAYARAN");
-        // System.out.println("=================================");
-
-        return ResponseEntity.ok("Order berhasil dibuat dengan ID: " + event.getOrderId());
+        return ResponseEntity.ok(
+                "Order berhasil dibuat dengan ID: "
+                        + orderId
+        );
     }
 
-    // DTO tetap sama
+    @GetMapping("/orders")
+    public ResponseEntity<List<Order>> getAllOrders() {
+
+        return ResponseEntity.ok(
+                orderRepository.findAll()
+        );
+    }
+
+    // =====================================
+    // DTO REQUEST
+    // =====================================
     public static class OrderRequest {
+
         private String customerName;
         private String restaurantName;
         private String productName;
         private int quantity;
         private BigDecimal totalPrice;
 
-        public String getCustomerName() { return customerName; }
-        public void setCustomerName(String customerName) { this.customerName = customerName; }
+        public String getCustomerName() {
+            return customerName;
+        }
 
-        public String getRestaurantName() { return restaurantName; }
-        public void setRestaurantName(String restaurantName) { this.restaurantName = restaurantName; }
+        public void setCustomerName(String customerName) {
+            this.customerName = customerName;
+        }
 
-        public String getProductName() { return productName; }
-        public void setProductName(String productName) { this.productName = productName; }
+        public String getRestaurantName() {
+            return restaurantName;
+        }
 
-        public int getQuantity() { return quantity; }
-        public void setQuantity(int quantity) { this.quantity = quantity; }
+        public void setRestaurantName(String restaurantName) {
+            this.restaurantName = restaurantName;
+        }
 
-        public BigDecimal getTotalPrice() { return totalPrice; }
-        public void setTotalPrice(BigDecimal totalPrice) { this.totalPrice = totalPrice; }
+        public String getProductName() {
+            return productName;
+        }
+
+        public void setProductName(String productName) {
+            this.productName = productName;
+        }
+
+        public int getQuantity() {
+            return quantity;
+        }
+
+        public void setQuantity(int quantity) {
+            this.quantity = quantity;
+        }
+
+        public BigDecimal getTotalPrice() {
+            return totalPrice;
+        }
+
+        public void setTotalPrice(BigDecimal totalPrice) {
+            this.totalPrice = totalPrice;
+        }
     }
 }
