@@ -13,7 +13,6 @@ public class OrderMetrics {
     public OrderMetrics(MeterRegistry meterRegistry) {
         this.meterRegistry = meterRegistry;
 
-        // Gauge (contoh sederhana)
         Gauge.builder("order.queue.size", this, OrderMetrics::getQueueSize)
                 .description("Current order queue size")
                 .register(meterRegistry);
@@ -33,7 +32,6 @@ public class OrderMetrics {
     }
 
     private double getQueueSize() {
-        // Sementara dummy dulu (biar gak error)
         return 0;
     }
 }

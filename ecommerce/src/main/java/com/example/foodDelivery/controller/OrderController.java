@@ -28,7 +28,7 @@ public class OrderController {
         this.orderService = orderService;
     }
     
-    @PostMapping("/orders")
+    @PostMapping("/order")
     public ResponseEntity<String> createOrder(
             @RequestBody OrderRequest request
     ) {

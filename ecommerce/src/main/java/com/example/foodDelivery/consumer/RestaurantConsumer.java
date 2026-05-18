@@ -1,23 +1,23 @@
 package com.example.foodDelivery.consumer;
 
 import com.example.foodDelivery.event.OrderEvent;
-import com.example.foodDelivery.model.Order;
+import com.example.foodDelivery.event.ProductReservedEvent;
+import com.example.foodDelivery.kafka.ProductProducer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
-//import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Service;
 
 @Service
 public class RestaurantConsumer {
 
-    private static final Logger log =
-            LoggerFactory.getLogger(RestaurantConsumer.class);
+    private static final Logger log = LoggerFactory.getLogger(RestaurantConsumer.class);
+
+    // Inject ProductProducer untuk mengirim event ke Payment
+    private final ProductProducer productProducer;
 
     // Simulasi database stok
-    // Dalam aplikasi nyata, ini dari database
-    private static final java.util.Map<String, Integer> menuStock =
-            new java.util.HashMap<>();
+    private static final java.util.Map<String, Integer> menuStock = new java.util.HashMap<>();
 
     static {
         // Initial stock
@@ -27,8 +27,13 @@ public class RestaurantConsumer {
         menuStock.put("Es Teh", 100);
     }
 
+    // Constructor Injection
+    public RestaurantConsumer(ProductProducer productProducer) {
+        this.productProducer = productProducer;
+    }
+
     /**
-     * Listener untuk inventory queue
+     * 1. SAGA HAPPY PATH: Listener untuk order baru
      */
     @KafkaListener(topics = "order-topic", groupId = "restaurant-group")
     public void receiveOrder(OrderEvent order) {
@@ -45,8 +50,20 @@ public class RestaurantConsumer {
             // Update stok
             updateStock(order);
 
-            log.info("✅ Restaurant berhasil memproses order: {}",
-                    order.getOrderId());
+            log.info("✅ Restaurant berhasil memproses order: {}", order.getOrderId());
+
+            // ==========================================
+            // SAGA: KIRIM EVENT KE PAYMENT SERVICE
+            // ==========================================
+            ProductReservedEvent reservedEvent = new ProductReservedEvent(
+                    order.getOrderId(),
+                    order.getTotalPrice(),
+                    order.getCustomerName(),
+                    order.getProductName(),
+                    order.getQuantity()
+            );
+            productProducer.sendProductReserved(reservedEvent);
+            log.info("⏩ SAGA: Event ProductReserved dikirim ke Kafka untuk diproses Payment");
 
         } catch (IllegalStateException e) {
             // Stok tidak cukup
@@ -60,6 +77,30 @@ public class RestaurantConsumer {
     }
 
     /**
+     * 2. SAGA COMPENSATION (ROLLBACK): Kembalikan stok jika payment gagal
+     */
+    @KafkaListener(topics = "payment-failed-topic", groupId = "restaurant-rollback-group")
+    public void rollbackStock(OrderEvent failedOrder) {
+        log.warn("===========================================");
+        log.warn("🔙 SAGA ROLLBACK: PAYMENT FAILED DETECTED");
+        log.warn("Mengembalikan stok untuk Order: {}", failedOrder.getOrderId());
+
+        String product = failedOrder.getProductName();
+        int quantityToReturn = failedOrder.getQuantity();
+
+        if (product != null && menuStock.containsKey(product)) {
+            int currentStock = menuStock.get(product);
+            menuStock.put(product, currentStock + quantityToReturn);
+
+            log.info("🔄 Stok {} dikembalikan sebanyak {}", product, quantityToReturn);
+            log.info("📈 Total stok {} kembali normal menjadi: {}", product, menuStock.get(product));
+        } else {
+            log.error("❌ Gagal rollback: Produk {} tidak dikenali di database", product);
+        }
+        log.warn("===========================================");
+    }
+
+    /**
      * Cek ketersediaan stok
      */
     private void checkStock(OrderEvent order) {
@@ -69,23 +110,18 @@ public class RestaurantConsumer {
 
         if (currentStock == null) {
             log.warn("Produk {} tidak ditemukan dalam inventory", productName);
-            // Anggap stok 0
             currentStock = 0;
         }
 
-        log.info("Stok saat ini: {} unit", currentStock);
-        log.info("Quantity diminta: {} unit", requestedQty);
-        log.info("DEBUG productName: [{}]", menuStock);
+        log.info("Stok saat ini: {} porsi", currentStock);
+        log.info("Quantity diminta: {} porsi", requestedQty);
 
         if (currentStock < requestedQty) {
             throw new IllegalStateException(
-                    String.format(
-                            "Stok %s tidak cukup. Diminta: %d, Tersedia: %d",
-                            productName, requestedQty, currentStock
-                    )
+                    String.format("Stok %s tidak cukup. Diminta: %d, Tersedia: %d",
+                            productName, requestedQty, currentStock)
             );
         }
-
         log.info("✅ Stok mencukupi");
     }
 
@@ -106,10 +142,8 @@ public class RestaurantConsumer {
         log.info(" Setelah: {}", newStock);
         log.info(" Berkurang: {}", quantity);
 
-        // Warning jika stok menipis
         if (newStock < 10) {
-            log.warn("⚠ STOK MENIPIS! {} tersisa {} unit",
-                    productName, newStock);
+            log.warn("⚠ STOK MENIPIS! {} tersisa {} unit", productName, newStock);
         }
     }
 
@@ -117,22 +151,14 @@ public class RestaurantConsumer {
      * Handler jika stok tidak cukup
      */
     private void handleInsufficientStock(OrderEvent order) {
-        log.warn("⚠ Menangani stok tidak cukup untuk order: {}",
-                order.getOrderId());
-
-        // Dalam aplikasi nyata:
-        // 1. Kirim notifikasi ke admin
-        // 2. Update order status menjadi OUT_OF_STOCK
-        // 3. Kirim email ke customer
-
+        log.warn("⚠ Menangani stok tidak cukup untuk order: {}", order.getOrderId());
         log.info("📧 Notifikasi dikirim ke admin untuk restock");
-        log.info("📧 Email dikirim ke customer: {}",
-                order.getCustomerName());
+        log.info("📧 Email dikirim ke customer: {}", order.getCustomerName());
+
+        // (Opsional) Jika di masa depan ingin membatalkan order saat stok habis,
+        // kamu bisa memanggil productProducer untuk mengirimkan ProductReservationFailedEvent di sini.
     }
 
-    /**
-     * Method untuk melihat stok (untuk testing)
-     */
     public static java.util.Map<String, Integer> getMenuStock() {
         return new java.util.HashMap<>(menuStock);
     }

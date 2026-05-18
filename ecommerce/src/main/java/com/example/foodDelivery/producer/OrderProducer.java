@@ -7,19 +7,15 @@ import org.springframework.stereotype.Service;
 @Service
 public class OrderProducer {
 
-    private final KafkaTemplate<String, OrderEvent> kafkaTemplate;
+    // Ubah OrderEvent menjadi Object
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    public OrderProducer(
-            KafkaTemplate<String, OrderEvent> kafkaTemplate
-    ) {
+    // Ubah OrderEvent menjadi Object di parameter constructor
+    public OrderProducer(KafkaTemplate<String, Object> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
     }
 
     public void sendOrder(OrderEvent order) {
-
-        kafkaTemplate.send(
-                "order-topic",
-                order
-        );
+        kafkaTemplate.send("order-topic", order);
     }
 }

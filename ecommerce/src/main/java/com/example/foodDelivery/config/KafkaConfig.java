@@ -21,46 +21,65 @@ import java.util.Map;
 
 @Configuration
 public class KafkaConfig {
-
     // ================= PRODUCER =================
 
     @Bean
-    public ProducerFactory<String, OrderEvent> producerFactory() {
+    // 1. Ubah OrderEvent menjadi Object di sini
+    public ProducerFactory<String, Object> producerFactory() {
 
         Map<String, Object> config = new HashMap<>();
-
-        config.put(
-                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
-                "localhost:9092"
-        );
-
-        config.put(
-                ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
-                StringSerializer.class
-        );
-
-        config.put(
-                ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-                JsonSerializer.class
-        );
+        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
 
         return new DefaultKafkaProducerFactory<>(config);
     }
 
     @Bean
-    public KafkaTemplate<String, OrderEvent> kafkaTemplate() {
-
+    // 2. Ubah OrderEvent menjadi Object di sini
+    public KafkaTemplate<String, Object> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
     }
+
+//    // ================= PRODUCER =================
+//
+//    @Bean
+//    public ProducerFactory<String, OrderEvent> producerFactory() {
+//
+//        Map<String, Object> config = new HashMap<>();
+//
+//        config.put(
+//                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
+//                "localhost:9092"
+//        );
+//
+//        config.put(
+//                ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+//                StringSerializer.class
+//        );
+//
+//        config.put(
+//                ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+//                JsonSerializer.class
+//        );
+//
+//        return new DefaultKafkaProducerFactory<>(config);
+//    }
+//
+//    @Bean
+//    public KafkaTemplate<String, OrderEvent> kafkaTemplate() {
+//
+//        return new KafkaTemplate<>(producerFactory());
+//    }
 
     // ================= CONSUMER =================
 
     @Bean
-    public ConsumerFactory<String, OrderEvent> consumerFactory() {
+    // 1. Ubah OrderEvent menjadi Object di sini
+    public ConsumerFactory<String, Object> consumerFactory() {
 
-        JsonDeserializer<OrderEvent> deserializer =
-                new JsonDeserializer<>(OrderEvent.class);
-
+        // 2. Kosongkan parameter class agar bisa membaca tipe data dari header secara dinamis
+        JsonDeserializer<Object> deserializer = new JsonDeserializer<>();
         deserializer.addTrustedPackages("*");
 
         Map<String, Object> config = new HashMap<>();
@@ -93,10 +112,11 @@ public class KafkaConfig {
     }
 
     @Bean(name = "kafkaListenerContainerFactory")
-    public ConcurrentKafkaListenerContainerFactory<String, OrderEvent>
+    // 3. Ubah OrderEvent menjadi Object di sini
+    public ConcurrentKafkaListenerContainerFactory<String, Object>
     kafkaListenerContainerFactory() {
 
-        ConcurrentKafkaListenerContainerFactory<String, OrderEvent> factory =
+        ConcurrentKafkaListenerContainerFactory<String, Object> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
 
         factory.setConsumerFactory(consumerFactory());
@@ -124,5 +144,11 @@ public class KafkaConfig {
     @Bean
     public NewTopic releaseStockTopic() {
         return new NewTopic("release-stock-topic", 1, (short) 1);
+    }
+
+    // 4. Tambahkan topik baru ini untuk jembatan Inventory ke Payment!
+    @Bean
+    public NewTopic productReservedTopic() {
+        return new NewTopic("product-reserved-topic", 1, (short) 1);
     }
 }

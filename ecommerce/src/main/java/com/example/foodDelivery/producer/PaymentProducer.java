@@ -7,27 +7,19 @@ import org.springframework.stereotype.Service;
 @Service
 public class PaymentProducer {
 
-    private final KafkaTemplate<String, OrderEvent> kafkaTemplate;
+    // Ubah OrderEvent menjadi Object
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    public PaymentProducer(
-            KafkaTemplate<String, OrderEvent> kafkaTemplate
-    ) {
+    // Ubah OrderEvent menjadi Object di parameter constructor ini
+    public PaymentProducer(KafkaTemplate<String, Object> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
     }
 
     public void sendPaymentSuccess(OrderEvent order) {
-
-        kafkaTemplate.send(
-                "payment-success-topic",
-                order
-        );
+        kafkaTemplate.send("payment-success-topic", order);
     }
 
     public void sendPaymentFailed(OrderEvent order) {
-
-        kafkaTemplate.send(
-                "payment-failed-topic",
-                order
-        );
+        kafkaTemplate.send("payment-failed-topic", order);
     }
 }
