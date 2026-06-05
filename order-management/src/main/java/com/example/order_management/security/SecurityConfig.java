@@ -1,27 +1,26 @@
-package com.example.order_management.security;
+package com.example.order_management.security; // Sesuaikan package untuk ecommerce (com.example.foodDelivery.config)
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-
         http
-            .csrf(csrf -> csrf.disable())
-            .cors(cors -> {})
-            .csrf(csrf -> csrf.disable())
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/**").permitAll() // login bebas
-                .requestMatchers("/api/products/**").permitAll()
-                .anyRequest().authenticated() // lainnya harus login
-            )
-            .addFilterBefore(new JwtFilter(), UsernamePasswordAuthenticationFilter.class);
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth
+                        // Endpoint yang boleh diakses tanpa login (misal lihat produk)
+                        .requestMatchers("/api/products/**").permitAll()
+                        // Semua endpoint lain WAJIB pakai token dari Keycloak
+                        .anyRequest().authenticated()
+                )
+                // Konfigurasi otomatis untuk membaca token JWT dari Keycloak
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
 
         return http.build();
     }
