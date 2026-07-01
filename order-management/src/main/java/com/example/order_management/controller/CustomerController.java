@@ -33,7 +33,6 @@ public class CustomerController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    // 🔥 FIX: pakai DTO + @Valid
     @PostMapping
     public ResponseEntity<Customer> createCustomer(
             @RequestBody @Valid CustomerRequest request
